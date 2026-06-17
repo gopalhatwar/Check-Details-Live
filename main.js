@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
       myPeerId = id;
       const shareUrl = `${window.location.origin}${window.location.pathname}?watch=${id}`;
       shareLinkInput.value = shareUrl;
+
       updateGlobalStatus('Ready. Invite student to start', 'waiting');
       myNameBadge.textContent = 'Imarticus Admin (Host)';
       
