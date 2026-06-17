@@ -322,6 +322,13 @@ document.addEventListener('DOMContentLoaded', () => {
     myDisplayName = studentNameInput.value.trim() || 'Student';
     myNameBadge.textContent = myDisplayName;
     
+    // Unlock iOS Safari WebRTC Autoplay on user gesture
+    remoteVideo.play().then(() => {
+      remoteVideo.pause();
+    }).catch(e => {
+      console.log("iOS Video unlocked via user gesture");
+    });
+    
     // Hide Modal Overlay
     welcomeOverlay.classList.add('hidden');
     updateGlobalStatus('Connecting to Guide...', 'waiting');
