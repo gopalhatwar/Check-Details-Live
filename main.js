@@ -300,6 +300,19 @@ document.addEventListener('DOMContentLoaded', () => {
     myDisplayName = studentNameInput.value.trim() || 'Student';
     myNameBadge.textContent = myDisplayName;
     
+    // Set up manual play button click handler to bypass iOS Safari autoplay blocks
+    const playBtn = document.getElementById('play-btn');
+    const playOverlay = document.getElementById('play-overlay');
+    if (playBtn && playOverlay) {
+      playBtn.onclick = () => {
+        remoteVideo.play().then(() => {
+          playOverlay.classList.add('hidden');
+        }).catch(err => {
+          console.error("Manual video play failed:", err);
+        });
+      };
+    }
+
     // Unlock iOS Safari WebRTC Autoplay on user gesture
     remoteVideo.play().then(() => {
       remoteVideo.pause();
@@ -338,11 +351,18 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Received screen share stream from Guide');
         remoteVideo.srcObject = remoteStream;
         
-        // Explicitly play the video
-        remoteVideo.play().catch(e => console.warn("Video play interrupted:", e));
-        
         document.getElementById('viewer-overlay').classList.add('hidden');
         updateGlobalStatus('Connected: Watching screen', 'connected');
+        
+        // Try autoplaying, if blocked show the manual overlay
+        remoteVideo.play().then(() => {
+          console.log("Autoplay succeeded");
+        }).catch(err => {
+          console.warn("Autoplay blocked, showing tap-to-view overlay:", err);
+          if (playOverlay) {
+            playOverlay.classList.remove('hidden');
+          }
+        });
       });
 
       call.on('close', () => {
