@@ -331,15 +331,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Hide Modal Overlay
     welcomeOverlay.classList.add('hidden');
-    updateGlobalStatus('Connecting to Guide...', 'waiting');
+    updateGlobalStatus('Connecting to signaling server...', 'waiting');
+    addSystemMessage('Step 1: Connecting to signaling server...');
 
-    // Create Student Peer with static ICE servers
+    // Create Student Peer with static ICE servers and debug logs
     peer = new Peer({
-      config: { iceServers: iceServersList }
+      config: { iceServers: iceServersList },
+      debug: 3
     });
 
     peer.on('open', (id) => {
       myPeerId = id;
+      updateGlobalStatus('Signaling connected. Connecting to Guide...', 'waiting');
+      addSystemMessage('Step 2: Connected to signaling. Initiating connection to Guide ID: ' + hostPeerId);
       
       // Connect to the Guide's Peer ID (hostPeerId) for data/signaling
       const conn = peer.connect(hostPeerId);
@@ -376,9 +380,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     peer.on('error', (err) => {
       console.error('Peer error:', err);
-      // Only redirect if the Guide has ended the session or the link is invalid
+      updateGlobalStatus('Error: ' + err.type, 'waiting');
+      addSystemMessage('❌ Connection error: ' + err.type + ' (' + err.message + ')');
+      
+      // Delay redirection on peer-unavailable so they can see the error
       if (err.type === 'peer-unavailable') {
-        window.location.href = "https://imarticus.org";
+        addSystemMessage('Session not found. Redirecting to Imarticus in 5 seconds...');
+        setTimeout(() => {
+          window.location.href = "https://imarticus.org";
+        }, 5000);
       }
     });
   }
@@ -389,6 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
     conn.on('open', () => {
       console.log('Data connection to Guide established.');
       updateGlobalStatus('Connected to Guide', 'connected');
+      addSystemMessage('Step 3: Connection established! Syncing screen...');
       enableChatInput();
 
       // Send join message with name
