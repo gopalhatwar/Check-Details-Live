@@ -280,10 +280,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  // --- VIEWER (STUDENT) LOGIC ---
   function initViewerMode() {
     broadcasterVideoContainer.classList.add('hidden');
-    viewerVideoContainer.classList.remove('active');
+    broadcasterVideoContainer.classList.remove('active');
+    viewerVideoContainer.classList.remove('hidden');
+    viewerVideoContainer.classList.add('active');
     inviteWidget.classList.add('hidden'); // students don't need to copy invite link
     
     // Show student welcome screen
@@ -317,8 +318,8 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Incoming call from Guide:', call.peer);
       activeCalls[call.peer] = call;
 
-      // Student answers without sharing any local stream
-      call.answer();
+      // Student answers with an empty stream to receive video
+      call.answer(new MediaStream());
 
       call.on('stream', (remoteStream) => {
         console.log('Received screen share stream from Guide');
