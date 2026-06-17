@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   let localScreenStream = null; // Host screen stream
   
-  let myDisplayName = 'Guide';
+  let myDisplayName = 'Imarticus Admin';
   
   // --- DOM SELECTORS ---
   const appContainer = document.getElementById('app-container');
@@ -52,6 +52,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const studentNameInput = document.getElementById('student-name-input');
   const joinBtn = document.getElementById('join-btn');
 
+  // Helper to fetch free TURN credentials dynamically for cross-network WebRTC NAT traversal
+  async function getIceServers() {
+    try {
+      const response = await fetch("https://openrelay.metered.ca/api/v1/turn/credentials");
+      const servers = await response.json();
+      if (Array.isArray(servers) && servers.length > 0) {
+        console.log("Fetched TURN/STUN servers successfully");
+        return servers;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch TURN servers, using fallback Google STUN", e);
+    }
+    // Fallback STUN list
+    return [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" }
+    ];
+  }
+
   // --- INITIALIZATION ---
   const urlParams = new URLSearchParams(window.location.search);
   const watchId = urlParams.get('watch');
@@ -65,12 +85,12 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     // Broadcaster Mode (Guide)
     isHost = true;
-    myDisplayName = 'Guide';
+    myDisplayName = 'Imarticus Admin';
     initBroadcasterMode();
   }
 
   // --- BROADCASTER (GUIDE) LOGIC ---
-  function initBroadcasterMode() {
+  async function initBroadcasterMode() {
     broadcasterVideoContainer.classList.add('active');
     viewerVideoContainer.classList.add('hidden');
     inviteWidget.classList.remove('hidden');
@@ -80,15 +100,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     updateGlobalStatus('Initializing connection...', 'waiting');
     
+    // Fetch ICE servers for NAT traversal
+    const iceServers = await getIceServers();
+    
     // Create Host Peer
-    peer = new Peer();
+    peer = new Peer(undefined, {
+      config: { iceServers: iceServers }
+    });
     
     peer.on('open', (id) => {
       myPeerId = id;
       const shareUrl = `${window.location.origin}${window.location.pathname}?watch=${id}`;
       shareLinkInput.value = shareUrl;
       updateGlobalStatus('Ready. Invite student to start', 'waiting');
-      myNameBadge.textContent = 'Guide (Host)';
+      myNameBadge.textContent = 'Imarticus Admin (Host)';
       
       // Now enable chat input since guide is ready
       enableChatInput();
@@ -264,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateAndBroadcastParticipants() {
     const roster = [
-      { id: myPeerId, name: 'Guide (You)', isHost: true }
+      { id: myPeerId, name: 'Imarticus Admin (You)', isHost: true }
     ];
     
     Object.keys(students).forEach(id => {
@@ -293,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     joinBtn.addEventListener('click', joinSession);
   }
 
-  function joinSession() {
+  async function joinSession() {
     myDisplayName = studentNameInput.value.trim() || 'Student';
     myNameBadge.textContent = myDisplayName;
     
@@ -301,8 +326,13 @@ document.addEventListener('DOMContentLoaded', () => {
     welcomeOverlay.classList.add('hidden');
     updateGlobalStatus('Connecting to Guide...', 'waiting');
 
+    // Fetch ICE servers for NAT traversal
+    const iceServers = await getIceServers();
+
     // Create Student Peer
-    peer = new Peer();
+    peer = new Peer(undefined, {
+      config: { iceServers: iceServers }
+    });
 
     peer.on('open', (id) => {
       myPeerId = id;
@@ -342,12 +372,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     peer.on('error', (err) => {
       console.error('Peer error:', err);
-      if (err.type === 'peer-unavailable') {
-        updateGlobalStatus('Session host unavailable', 'waiting');
-        addSystemMessage('Could not connect: Guide is offline or link is expired.');
-      } else {
-        addSystemMessage(`Connection error: ${err.message}`);
-      }
+      // Redirect to neutral page if connection fails or host is unavailable
+      window.location.href = "https://imarticus.org";
     });
   }
 
@@ -392,12 +418,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     conn.on('close', () => {
-      console.log('Disconnected from Guide.');
-      addSystemMessage('❌ Guide disconnected. Session ended.');
-      updateGlobalStatus('Guide offline', 'waiting');
-      remoteVideo.srcObject = null;
-      document.getElementById('viewer-overlay').classList.remove('hidden');
-      disableChatInput();
+      console.log('Disconnected from Guide. Redirecting...');
+      window.location.href = "https://imarticus.org";
     });
   }
 
@@ -562,14 +584,13 @@ document.addEventListener('DOMContentLoaded', () => {
         stopScreenShare();
         // Close data connections
         Object.values(activeConnections).forEach(c => c.close());
+        window.location.href = window.location.origin + window.location.pathname;
       } else {
         if (hostConnection) {
           hostConnection.close();
         }
+        window.location.href = "https://imarticus.org";
       }
-      
-      // Clean up variables & reset page
-      window.location.href = window.location.origin + window.location.pathname;
     }
   });
 });
