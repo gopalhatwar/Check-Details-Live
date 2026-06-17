@@ -318,12 +318,16 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Incoming call from Guide:', call.peer);
       activeCalls[call.peer] = call;
 
-      // Student answers with an empty stream to receive video
-      call.answer(new MediaStream());
+      // Student answers without sharing any local stream
+      call.answer();
 
       call.on('stream', (remoteStream) => {
         console.log('Received screen share stream from Guide');
         remoteVideo.srcObject = remoteStream;
+        
+        // Explicitly play the video
+        remoteVideo.play().catch(e => console.warn("Video play interrupted:", e));
+        
         document.getElementById('viewer-overlay').classList.add('hidden');
         updateGlobalStatus('Connected: Watching screen', 'connected');
       });
