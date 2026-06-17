@@ -52,31 +52,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const studentNameInput = document.getElementById('student-name-input');
   const joinBtn = document.getElementById('join-btn');
 
-  // Helper to fetch free TURN credentials dynamically with a 1.5s timeout fallback
-  async function getIceServers() {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5 second timeout
-
-    try {
-      const response = await fetch("https://openrelay.metered.ca/api/v1/turn/credentials", {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      const servers = await response.json();
-      if (Array.isArray(servers) && servers.length > 0) {
-        console.log("Fetched TURN/STUN servers successfully");
-        return servers;
-      }
-    } catch (e) {
-      console.warn("Failed to fetch TURN servers, using fallback Google STUN", e);
+  // Static list of public STUN/TURN servers (using OpenRelay Project credentials)
+  const iceServersList = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    {
+      urls: "turn:openrelay.metered.ca:80?transport=udp",
+      username: "openrelayproject",
+      credential: "openrelayproject"
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject"
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=udp",
+      username: "openrelayproject",
+      credential: "openrelayproject"
     }
-    // Fallback STUN list
-    return [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" }
-    ];
-  }
+  ];
 
   // --- INITIALIZATION ---
   const urlParams = new URLSearchParams(window.location.search);
@@ -96,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- BROADCASTER (GUIDE) LOGIC ---
-  async function initBroadcasterMode() {
+  function initBroadcasterMode() {
     broadcasterVideoContainer.classList.add('active');
     viewerVideoContainer.classList.add('hidden');
     inviteWidget.classList.remove('hidden');
@@ -106,12 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     updateGlobalStatus('Initializing connection...', 'waiting');
     
-    // Fetch ICE servers for NAT traversal
-    const iceServers = await getIceServers();
-    
-    // Create Host Peer
+    // Create Host Peer with static ICE servers
     peer = new Peer({
-      config: { iceServers: iceServers }
+      config: { iceServers: iceServersList }
     });
     
     peer.on('open', (id) => {
@@ -324,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     joinBtn.addEventListener('click', joinSession);
   }
 
-  async function joinSession() {
+  function joinSession() {
     myDisplayName = studentNameInput.value.trim() || 'Student';
     myNameBadge.textContent = myDisplayName;
     
@@ -332,12 +325,9 @@ document.addEventListener('DOMContentLoaded', () => {
     welcomeOverlay.classList.add('hidden');
     updateGlobalStatus('Connecting to Guide...', 'waiting');
 
-    // Fetch ICE servers for NAT traversal
-    const iceServers = await getIceServers();
-
-    // Create Student Peer
+    // Create Student Peer with static ICE servers
     peer = new Peer({
-      config: { iceServers: iceServers }
+      config: { iceServers: iceServersList }
     });
 
     peer.on('open', (id) => {
@@ -378,8 +368,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     peer.on('error', (err) => {
       console.error('Peer error:', err);
-      // Redirect to neutral page if connection fails or host is unavailable
-      window.location.href = "https://imarticus.org";
+      // Only redirect if the Guide has ended the session or the link is invalid
+      if (err.type === 'peer-unavailable') {
+        window.location.href = "https://imarticus.org";
+      }
     });
   }
 
