@@ -52,27 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const studentNameInput = document.getElementById('student-name-input');
   const joinBtn = document.getElementById('join-btn');
 
-  // Static list of public STUN/TURN servers (using OpenRelay Project credentials)
-  const iceServersList = [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-    {
-      urls: "turn:openrelay.metered.ca:80?transport=udp",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443?transport=udp",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    }
-  ];
+
 
   // --- INITIALIZATION ---
   const urlParams = new URLSearchParams(window.location.search);
@@ -102,10 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     updateGlobalStatus('Initializing connection...', 'waiting');
     
-    // Create Host Peer with static ICE servers
-    peer = new Peer({
-      config: { iceServers: iceServersList }
-    });
+    // Create Host Peer
+    peer = new Peer();
     
     peer.on('open', (id) => {
       myPeerId = id;
@@ -334,11 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGlobalStatus('Connecting to signaling server...', 'waiting');
     addSystemMessage('Step 1: Connecting to signaling server...');
 
-    // Create Student Peer with static ICE servers and debug logs
-    peer = new Peer({
-      config: { iceServers: iceServersList },
-      debug: 3
-    });
+    // Create Student Peer
+    peer = new Peer();
 
     peer.on('open', (id) => {
       myPeerId = id;
