@@ -52,10 +52,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const studentNameInput = document.getElementById('student-name-input');
   const joinBtn = document.getElementById('join-btn');
 
-  // Helper to fetch free TURN credentials dynamically for cross-network WebRTC NAT traversal
+  // Helper to fetch free TURN credentials dynamically with a 1.5s timeout fallback
   async function getIceServers() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5 second timeout
+
     try {
-      const response = await fetch("https://openrelay.metered.ca/api/v1/turn/credentials");
+      const response = await fetch("https://openrelay.metered.ca/api/v1/turn/credentials", {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
       const servers = await response.json();
       if (Array.isArray(servers) && servers.length > 0) {
         console.log("Fetched TURN/STUN servers successfully");
@@ -104,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const iceServers = await getIceServers();
     
     // Create Host Peer
-    peer = new Peer(undefined, {
+    peer = new Peer({
       config: { iceServers: iceServers }
     });
     
@@ -330,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const iceServers = await getIceServers();
 
     // Create Student Peer
-    peer = new Peer(undefined, {
+    peer = new Peer({
       config: { iceServers: iceServers }
     });
 
